@@ -4,8 +4,6 @@ const cors = require('cors');
 const Item = require('./models/Item'); // 引入 Item 模型
 const app = express();
 
-const cors = require('cors');
-app.use(cors());
 
 app.use(cors());
 app.use(express.json());
