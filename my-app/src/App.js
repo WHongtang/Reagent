@@ -73,7 +73,6 @@ function App() {
       return;
     }
   
-    // 检查试剂名称是否已存在（排除当前正在编辑的试剂）
     const existingItem = items.find(item =>
       item.name.toLowerCase() === currentName.toLowerCase() && item._id !== editItemId
     );
@@ -84,7 +83,6 @@ function App() {
     } else {
       setErrorMessage('');
   
-      // 先构建 newItemRaw
       const newItemRaw = {
         name: currentName,
         location: formData.location,
@@ -94,7 +92,6 @@ function App() {
         remarks: formData.remarks
       };
   
-      // 清理空字符串字段（去掉无效字段）
       const newItem = {};
       Object.keys(newItemRaw).forEach((key) => {
         const value = newItemRaw[key];
@@ -109,7 +106,6 @@ function App() {
   
       try {
         if (editItemId) {
-          // 编辑操作
           const response = await fetch(`${API_BASE_URL}/items/${editItemId}`, {
             method: 'PUT',
             headers: {
@@ -125,7 +121,6 @@ function App() {
             setEditItemId(null);
           }
         } else {
-          // 添加操作
           const response = await fetch(`${API_BASE_URL}/items`, {
             method: 'POST',
             headers: {
@@ -143,7 +138,6 @@ function App() {
           }
         }
   
-        // 重置表单
         setFormData({
           name: '',
           location: '',
@@ -159,7 +153,7 @@ function App() {
       }
     }
   };
-  
+ 
 
   // 编辑数据
   const handleEdit = (item) => {
