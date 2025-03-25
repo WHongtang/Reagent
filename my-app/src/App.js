@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import './App.css';  // 导入样式
+import { API_BASE_URL } from './config';
 
 function App() {
   const [items, setItems] = useState([]);
@@ -18,7 +19,7 @@ function App() {
 
   // 获取 Items 数据
   useEffect(() => {
-    fetch('http://localhost:5000/items')
+    fetch(`${API_BASE_URL}/items`)
       .then(response => response.json())
       .then(data => {
         setItems(data);
@@ -94,7 +95,7 @@ function App() {
       try {
         if (editItemId) {
           // 如果是编辑操作
-          const response = await fetch(`http://localhost:5000/items/${editItemId}`, {
+          const response = await fetch(`${API_BASE_URL}/items/${editItemId}`, {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
@@ -110,7 +111,7 @@ function App() {
           }
         } else {
           // 否则是添加新项目
-          const response = await fetch('http://localhost:5000/items', {
+          const response = await fetch(`${API_BASE_URL}/items`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -156,7 +157,7 @@ function App() {
     const confirmDelete = window.confirm('Are you sure you want to delete this item?');
     if (confirmDelete) {
       try {
-        const response = await fetch(`http://localhost:5000/items/${id}`, { method: 'DELETE' });
+        const response = await fetch(`${API_BASE_URL}/items/${id}`, { method: 'DELETE' });
         if (response.ok) {
           setItems(items.filter(item => item._id !== id));
           setFilteredItems(filteredItems.filter(item => item._id !== id));
