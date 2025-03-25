@@ -66,35 +66,50 @@ function App() {
   // 提交表单
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+  
+    const currentName = formData.name.trim();
+    if (!currentName) {
+      alert("试剂名称是必填项！");
+      return;
+    }
+  
     // 检查试剂名称是否已存在（排除当前正在编辑的试剂）
-    const existingItem = items.find(item => 
-      item.name.toLowerCase() === formData.name.toLowerCase() && item._id !== editItemId
+    const existingItem = items.find(item =>
+      item.name.toLowerCase() === currentName.toLowerCase() && item._id !== editItemId
     );
-
+  
     if (existingItem) {
       setErrorMessage('已存在相同名称的试剂，请修改试剂名称');
-      return; // 阻止提交
+      return;
     } else {
-      setErrorMessage(''); // 清空错误信息
-
-      if (!formData.name) {
-        alert("试剂名称是必填项！");
-        return;
-      }
-
-      const newItem = {
-        name: formData.name,
+      setErrorMessage('');
+  
+      // 先构建 newItemRaw
+      const newItemRaw = {
+        name: currentName,
         location: formData.location,
-        quantity: formData.quantity, // 余量字段
+        quantity: formData.quantity,
         expiryDate: formData.expiryDate,
         manager: formData.manager,
         remarks: formData.remarks
       };
-
+  
+      // 清理空字符串字段（去掉无效字段）
+      const newItem = {};
+      Object.keys(newItemRaw).forEach((key) => {
+        const value = newItemRaw[key];
+        if (typeof value === 'string') {
+          if (value.trim() !== '') {
+            newItem[key] = value.trim();
+          }
+        } else if (value) {
+          newItem[key] = value;
+        }
+      });
+  
       try {
         if (editItemId) {
-          // 如果是编辑操作
+          // 编辑操作
           const response = await fetch(`${API_BASE_URL}/items/${editItemId}`, {
             method: 'PUT',
             headers: {
@@ -102,7 +117,7 @@ function App() {
             },
             body: JSON.stringify(newItem),
           });
-
+  
           if (response.ok) {
             const updatedItem = await response.json();
             setItems(items.map(item => (item._id === updatedItem._id ? updatedItem : item)));
@@ -110,7 +125,7 @@ function App() {
             setEditItemId(null);
           }
         } else {
-          // 否则是添加新项目
+          // 添加操作
           const response = await fetch(`${API_BASE_URL}/items`, {
             method: 'POST',
             headers: {
@@ -118,28 +133,33 @@ function App() {
             },
             body: JSON.stringify(newItem),
           });
-
+  
           if (response.ok) {
             const addedItem = await response.json();
             setItems([...items, addedItem]);
             setFilteredItems([...filteredItems, addedItem]);
+          } else {
+            alert('添加失败：服务器返回错误状态');
           }
         }
+  
+        // 重置表单
         setFormData({
           name: '',
           location: '',
-          quantity: '', // 重置余量
+          quantity: '',
           expiryDate: '',
           manager: '',
           remarks: ''
         });
+  
       } catch (error) {
         console.error('Error:', error);
-        alert('添加失败：请检查必填项是否填写、网络是否可用，或查看控制台错误信息');
+        alert('添加失败：请检查网络或控制台错误信息');
       }
-      
     }
   };
+  
 
   // 编辑数据
   const handleEdit = (item) => {
