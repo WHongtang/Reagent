@@ -135,7 +135,9 @@ function App() {
         });
       } catch (error) {
         console.error('Error:', error);
+        alert('添加失败：请检查必填项是否填写、网络是否可用，或查看控制台错误信息');
       }
+      
     }
   };
 
@@ -145,7 +147,7 @@ function App() {
       name: item.name,
       location: item.location,
       quantity: item.quantity,  // 确保编辑时余量字段被填充
-      expiryDate: item.expiryDate,
+      expiryDate: item.expiryDate ? formatDate(item.expiryDate) : '',
       manager: item.manager,
       remarks: item.remarks
     });
