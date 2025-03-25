@@ -4,7 +4,7 @@ const itemSchema = new mongoose.Schema({
   name: { type: String, required: true },
   description: { type: String, required: false },
   location: { type: String, required: false },
-  quantity: { type: String, required: true }, // 修改为 String 类型以支持数字和单位
+  quantity: { type: String, required: false }, // 修改为 String 类型以支持数字和单位
   expiryDate: { type: Date, required: false },
   manager: { type: String, required: false },
   remarks: { type: String, required: false }
