@@ -1,11 +1,17 @@
 const mongoose = require('mongoose');
 
-// 定义 Item 模型
-const ItemSchema = new mongoose.Schema({
+const itemSchema = new mongoose.Schema({
   name: { type: String, required: true },
-  description: { type: String, required: true }
+  description: { type: String, required: false },
+  location: { type: String, required: false },
+  quantity: { type: String, required: true }, // 修改为 String 类型以支持数字和单位
+  expiryDate: { type: Date, required: false },
+  manager: { type: String, required: false },
+  remarks: { type: String, required: false }
 });
 
-// 创建模型并导出
-const Item = mongoose.model('Item', ItemSchema);
+const Item = mongoose.model('Item', itemSchema);
+
 module.exports = Item;
+
+
