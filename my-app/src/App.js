@@ -1,267 +1,246 @@
-import React, { useEffect, useState } from 'react';
-import './App.css';  // 导入样式
+import React, { useEffect, useState, useRef } from 'react';
+import './App.css';
 import { API_BASE_URL } from './config';
 
 function App() {
   const [items, setItems] = useState([]);
-  const [filteredItems, setFilteredItems] = useState([]); // 用于保存搜索后的数据
+  const [filteredItems, setFilteredItems] = useState([]);
   const [formData, setFormData] = useState({
-    name: '',
-    location: '',
-    quantity: '', // 余量字段
-    expiryDate: '',
-    manager: '',
-    remarks: ''
+    name: '', location: '', quantity: '', expiryDate: '', manager: '', cas: '', link: '', remarks: ''
   });
-  const [editItemId, setEditItemId] = useState(null);  // 用于追踪正在编辑的项目
-  const [searchQuery, setSearchQuery] = useState(''); // 用于存储搜索框中的内容
-  const [errorMessage, setErrorMessage] = useState(''); // 用于显示错误信息
+  const [editItemId, setEditItemId] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [backendReady, setBackendReady] = useState(false);
+  const [authenticated, setAuthenticated] = useState(false);
+  const [loginForm, setLoginForm] = useState({
+    username: localStorage.getItem('savedUsername') || '',
+    password: localStorage.getItem('savedPassword') || '',
+    remember: localStorage.getItem('rememberMe') === 'true'
+  });
+  const formRef = useRef(null);
 
-  // 获取 Items 数据
   useEffect(() => {
-    fetch(`${API_BASE_URL}/items`)
-      .then(response => response.json())
+    fetch(`${API_BASE_URL}/ping`)
+      .then(res => res.text())
       .then(data => {
-        setItems(data);
-        setFilteredItems(data);  // 初始化时显示所有数据
+        if (data === 'pong') setBackendReady(true);
       })
-      .catch(error => console.error('Error fetching items:', error));
+      .catch(err => console.error('❌ 后端未响应:', err));
   }, []);
 
-  // 处理表单输入
+  useEffect(() => {
+    if (!backendReady || !authenticated) return;
+    setLoading(true);
+    fetch(`${API_BASE_URL}/items`)
+      .then(res => res.json())
+      .then(data => {
+        setItems(data);
+        setFilteredItems(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('❌ 获取失败:', err);
+        setLoading(false);
+      });
+  }, [backendReady, authenticated]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value // 更新相应字段
-    });
+    setFormData({ ...formData, [name]: value });
   };
 
-  // 处理搜索输入
   const handleSearchChange = (e) => {
-    const { value } = e.target;
+    const value = e.target.value;
     setSearchQuery(value);
-
-    // 根据搜索条件过滤数据
-    const filtered = items.filter(item => {
-      return (
-        (item.name && item.name.toLowerCase().includes(value.toLowerCase())) ||
-        (item.manager && item.manager.toLowerCase().includes(value.toLowerCase())) ||
-        (item.location && item.location.toLowerCase().includes(value.toLowerCase())) ||
-        (item.remarks && item.remarks.toLowerCase().includes(value.toLowerCase())) ||
-        (item.quantity && item.quantity.toLowerCase().includes(value.toLowerCase())) // 添加余量搜索
-      );
-    });
-
-    setFilteredItems(filtered); // 更新筛选后的数据
-  };
-
-  // 格式化过期时间
-  const formatDate = (date) => {
-    if (!date) return '';  // 如果日期为空，返回空字符串
-    const d = new Date(date);
-    return d.toISOString().split('T')[0]; // 获取日期部分，格式化为 "yyyy-mm-dd"
-  };
-
-   // 提交表单
-   const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    // 检查试剂名称是否已存在（排除当前正在编辑的试剂）
-    const existingItem = items.find(item => 
-      item.name.toLowerCase() === formData.name.toLowerCase() && item._id !== editItemId
+    const filtered = items.filter(item =>
+      ['name', 'manager', 'location', 'cas', 'remarks', 'quantity', 'link'].some(key =>
+        item[key]?.toLowerCase().includes(value.toLowerCase())
+      )
     );
+    setFilteredItems(filtered);
+  };
 
-    if (existingItem) {
-      setErrorMessage('已存在相同名称的试剂，请修改试剂名称');
-      return; // 阻止提交
-    } else {
-      setErrorMessage(''); // 清空错误信息
+  const formatDate = (date) => {
+    if (!date) return '';
+    return new Date(date).toISOString().split('T')[0];
+  };
 
-      if (!formData.name) {
-        alert("试剂名称是必填项！");
-        return;
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.name) return alert('试剂名称是必填项');
+    if (submitting) return;
+
+    setSubmitting(true);
+    setErrorMessage('');
+
+    const url = editItemId ? `${API_BASE_URL}/items/${editItemId}` : `${API_BASE_URL}/items`;
+    const method = editItemId ? 'PUT' : 'POST';
+
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+
+      if (response.status === 409) {
+        setErrorMessage('已存在同名试剂，请修改名称');
+      } else if (!response.ok) {
+        throw new Error('提交失败');
+      } else {
+        const result = await response.json();
+        const updatedList = editItemId
+          ? items.map(item => item._id === result._id ? result : item)
+          : [...items, result];
+        setItems(updatedList);
+        setFilteredItems(updatedList);
+        setEditItemId(null);
+        setFormData({ name: '', location: '', quantity: '', expiryDate: '', manager: '', cas: '', link: '', remarks: '' });
+        setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
       }
-
-      const newItem = {
-        name: formData.name,
-        location: formData.location,
-        quantity: formData.quantity, // 余量字段
-        expiryDate: formData.expiryDate,
-        manager: formData.manager,
-        remarks: formData.remarks
-      };
-
-      try {
-        if (editItemId) {
-          // 如果是编辑操作
-          const response = await fetch(`${API_BASE_URL}/items/${editItemId}`, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(newItem),
-          });
-
-          if (response.ok) {
-            const updatedItem = await response.json();
-            setItems(items.map(item => (item._id === updatedItem._id ? updatedItem : item)));
-            setFilteredItems(filteredItems.map(item => (item._id === updatedItem._id ? updatedItem : item)));
-            setEditItemId(null);
-          }
-        } else {
-          // 否则是添加新项目
-          const response = await fetch(`${API_BASE_URL}/items`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(newItem),
-          });
-
-          if (response.ok) {
-            const addedItem = await response.json();
-            setItems([...items, addedItem]);
-            setFilteredItems([...filteredItems, addedItem]);
-          }
-        }
-        setFormData({
-          name: '',
-          location: '',
-          quantity: '', // 重置余量
-          expiryDate: '',
-          manager: '',
-          remarks: ''
-        });
-      } catch (error) {
-        console.error('Error:', error);
-        alert('添加失败：请检查必填项是否填写、网络是否可用，或查看控制台错误信息');
-      }
-      
+    } catch (err) {
+      alert('提交失败，请检查网络或控制台错误');
+      console.error(err);
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  // 编辑数据
   const handleEdit = (item) => {
     setFormData({
-      name: item.name,
-      location: item.location,
-      quantity: item.quantity,  // 确保编辑时余量字段被填充
+      name: item.name || '',
+      location: item.location || '',
+      quantity: item.quantity || '',
       expiryDate: item.expiryDate ? formatDate(item.expiryDate) : '',
-      manager: item.manager,
-      remarks: item.remarks
+      manager: item.manager || '',
+      cas: item.cas || '',
+      link: item.link || '',
+      remarks: item.remarks || ''
     });
     setEditItemId(item._id);
+    setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
   };
 
-  // 删除数据
   const handleDelete = async (id) => {
-    const confirmDelete = window.confirm('Are you sure you want to delete this item?');
-    if (confirmDelete) {
-      try {
-        const response = await fetch(`${API_BASE_URL}/items/${id}`, { method: 'DELETE' });
-        if (response.ok) {
-          setItems(items.filter(item => item._id !== id));
-          setFilteredItems(filteredItems.filter(item => item._id !== id));
-        } else {
-          console.error('Error deleting item');
-        }
-      } catch (error) {
-        console.error('Error:', error);
-      }
+    if (!window.confirm('确认删除此试剂吗？')) return;
+    try {
+      await fetch(`${API_BASE_URL}/items/${id}`, { method: 'DELETE' });
+      const updated = items.filter(item => item._id !== id);
+      setItems(updated);
+      setFilteredItems(updated);
+    } catch (err) {
+      alert('删除失败');
+      console.error(err);
     }
   };
 
+  const handleLogin = (e) => {
+    e.preventDefault();
+    if (loginForm.username === '429' && loginForm.password === '429') {
+      setAuthenticated(true);
+      if (loginForm.remember) {
+        localStorage.setItem('savedUsername', loginForm.username);
+        localStorage.setItem('savedPassword', loginForm.password);
+        localStorage.setItem('rememberMe', 'true');
+      } else {
+        localStorage.removeItem('savedUsername');
+        localStorage.removeItem('savedPassword');
+        localStorage.removeItem('rememberMe');
+      }
+    } else {
+      alert('账号或密码错误');
+    }
+  };
+
+  if (!authenticated) {
+    return (
+      <div className="container" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', padding: '10px' }}>
+        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', maxWidth: '300px', padding: '30px', border: '1px solid #ccc', borderRadius: '10px', boxShadow: '0 0 10px rgba(0,0,0,0.1)', backgroundColor: 'white', alignItems: 'center' }}>
+          <h2 style={{ textAlign: 'center', fontWeight: 'bold' }}>登录</h2>
+          <input type="text" name="username" placeholder="用户名" value={loginForm.username} onChange={e => setLoginForm({ ...loginForm, username: e.target.value })} required style={{ padding: '10px', fontSize: '16px', width: '100%' }} />
+          <input type="password" name="password" placeholder="密码" value={loginForm.password} onChange={e => setLoginForm({ ...loginForm, password: e.target.value })} required style={{ padding: '10px', fontSize: '16px', width: '100%' }} />
+          <label style={{ fontSize: '14px', alignSelf: 'flex-start' }}>
+            <input type="checkbox" checked={loginForm.remember} onChange={e => setLoginForm({ ...loginForm, remember: e.target.checked })} style={{ marginRight: '5px' }} />
+            记住密码
+          </label>
+          <button type="submit" style={{ padding: '10px', fontSize: '16px', width: '100%' }}>登录</button>
+          <div style={{ marginTop: '10px', fontSize: '13px', color: '#666', textAlign: 'center' }}>在小小的429里挖呀挖呀挖</div>
+        </form>
+      </div>
+    );
+  }
+
   return (
-    <div className="container">
-      <h1>Items from MongoDB:</h1>
+    <div className="container" style={{ paddingBottom: '50px', paddingLeft: '40px', paddingRight: '40px' }}>
+      <h1>试剂管理系统</h1>
 
-      {/* 搜索框 */}
-      <input
-        type="text"
-        placeholder="搜索试剂名称、管理人、余量、备注..."
-        value={searchQuery}
-        onChange={handleSearchChange}
-      />
+      {!backendReady ? <p>🔄 正在连接服务器...</p> : loading ? <p>⏳ 数据加载中...</p> : null}
 
-      {/* 显示错误信息 */}
+      <input type="text" placeholder="搜索试剂名称、管理人、CAS码、备注、链接..." value={searchQuery} onChange={handleSearchChange} />
+
       {errorMessage && <p className="error-message">{errorMessage}</p>}
 
-      {/* 表单输入部分 */}
-      <form onSubmit={handleSubmit}>
-        <input
-          type="text"
-          name="name"
-          placeholder="试剂名称"
-          value={formData.name}
-          onChange={handleChange}
-          required
-        />
-        <input
-          type="text"
-          name="location"
-          placeholder="存放位置"
-          value={formData.location}
-          onChange={handleChange}
-        />
-        <input
-          type="text"
-          name="quantity"
-          placeholder="余量 (如：10 ml)"
-          value={formData.quantity} // 确保余量显示
-          onChange={handleChange}
-        />
-        <input
-          type="date"
-          name="expiryDate"
-          placeholder="过期时间"
-          value={formData.expiryDate}
-          onChange={handleChange}
-        />
-        <input
-          type="text"
-          name="manager"
-          placeholder="管理人"
-          value={formData.manager}
-          onChange={handleChange}
-        />
-        <input
-          type="text"
-          name="remarks"
-          placeholder="备注"
-          value={formData.remarks}
-          onChange={handleChange}
-        />
-        <button type="submit">{editItemId ? '更新试剂' : '添加试剂'}</button>
-      </form>
+      <form
+  onSubmit={handleSubmit}
+  ref={formRef}
+  style={{
+    display: 'grid',
+    gridTemplateColumns: 'repeat(5, 1fr)', // 每行 5 列
+    gap: '30px',                           // 输入框之间的间距
+    maxWidth: '1100px',                    // 表单最大宽度
+    margin: '0 auto',                      // 居中显示
+    padding: '0 20px'                      // 页面两侧留白
+  }}
+>
+  {/* 第一行：5个输入框 */}
+  <input type="text" name="name" placeholder="试剂名称（必填）" value={formData.name} onChange={handleChange} required style={{ width: '100%' }} />
+  <input type="text" name="location" placeholder="存放位置" value={formData.location} onChange={handleChange} style={{ width: '100%' }} />
+  <input type="text" name="quantity" placeholder="余量 (如 10ml)" value={formData.quantity} onChange={handleChange} style={{ width: '100%' }} />
+  <input type="date" name="expiryDate" value={formData.expiryDate} onChange={handleChange} style={{ width: '100%' }} />
+  <input type="text" name="manager" placeholder="管理人" value={formData.manager} onChange={handleChange} style={{ width: '100%' }} />
 
-      {/* 显示表格 */}
-      <div className="table-container">
-        <table>
+  {/* 第二行：3个输入框 + 按钮 */}
+  <input type="text" name="cas" placeholder="CAS码" value={formData.cas} onChange={handleChange} style={{ width: '100%' }} />
+  <input type="text" name="link" placeholder="购买链接" value={formData.link} onChange={handleChange} style={{ width: '100%' }} />
+  <input type="text" name="remarks" placeholder="备注" value={formData.remarks} onChange={handleChange} style={{ width: '100%' }} />
+  <button
+    type="submit"
+    disabled={submitting}
+    style={{ width: '100%', height: '40px', fontSize: '16px' }}
+  >
+    {submitting ? '处理中...' : (editItemId ? '更新试剂' : '添加试剂')}
+  </button>
+</form>
+
+
+      <div className="table-container" style={{ marginTop: '40px', marginBottom: '80px' }}>
+        <table style={{ width: '100%', minWidth: '800px' }}>
           <thead>
             <tr>
-              <th>试剂名称</th>
-              <th>存放位置</th>
-              <th>余量</th>
-              <th>过期时间</th>
-              <th>管理人</th>
-              <th>备注</th>
-              <th>操作</th>
+              <th>名称</th><th>位置</th><th>余量</th><th>过期</th><th>管理人</th><th>CAS码</th><th>购买链接</th><th>备注</th><th>操作</th>
             </tr>
           </thead>
           <tbody>
-            {filteredItems.map((item) => (
+            {filteredItems.map(item => (
               <tr key={item._id}>
                 <td>{item.name}</td>
                 <td>{item.location || '-'}</td>
                 <td>{item.quantity || '-'}</td>
-                <td>{formatDate(item.expiryDate)}</td> {/* 格式化过期时间 */}
+                <td>{formatDate(item.expiryDate)}</td>
                 <td>{item.manager || '-'}</td>
+                <td>{item.cas || '-'}</td>
+                <td>{item.link ? <a href={item.link} target="_blank" rel="noopener noreferrer">{item.link}</a> : '-'}</td>
                 <td>{item.remarks || '-'}</td>
                 <td>
-                  <button onClick={() => handleEdit(item)}>编辑</button>
-                  <button onClick={() => handleDelete(item._id)}>删除</button>
-                </td>
+  <button onClick={() => handleEdit(item)}>编辑</button>
+  <button onClick={() => handleDelete(item._id)}>删除</button>
+</td>
+
+
+
               </tr>
             ))}
           </tbody>

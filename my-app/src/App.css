@@ -51,6 +51,9 @@ th, td {
   border: 1px solid #ddd;
 }
 
+/* 搜索框 */
+/* 为所有类型为 text 和 date 的 <input> 输入框应用样式 */
+
 th {
   background-color: #f4f4f4;
   font-weight: bold;
@@ -63,4 +66,48 @@ tr:hover {
 input[type="text"]:focus, input[type="date"]:focus {
   outline: none;
   border: 2px solid #4CAF50;
+}
+
+/* 仅控制表格数据区域（tbody）中单元格的样式 */
+tbody td {
+  padding-top: 4px;
+  padding-bottom: 4px;
+  line-height: 1.2;
+  font-size: 14px;
+  height: auto;
+  vertical-align: middle;
+}
+
+/* ✅ 操作栏按钮样式保持不变 */
+td button {
+  padding: 4px 8px;
+  font-size: 12px;
+  margin: 2px;
+  display: inline-block;
+  height: auto;
+  line-height: 1;
+}
+
+/* ✅ 修改为按钮垂直排列（新增包裹容器） */
+.action-buttons {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px; /* 按钮之间垂直间距 */
+}
+
+/* 操作栏按钮排布样式 */
+td:last-child {
+  white-space: nowrap;     /* 不换行 */
+  width: 180px;             /* 加宽操作栏，确保容纳两个按钮 */
+  text-align: center;       /* 居中显示按钮 */
+}
+
+td:last-child button {
+  display: inline-block;
+  margin: 4px;
+  padding: 6px 12px;
+  font-size: 14px;
+  width: 70px;              /* 可调整按钮宽度，防止太大 */
+  height: auto;
 }
