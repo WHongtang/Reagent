@@ -111,3 +111,43 @@ td:last-child button {
   width: 70px;              /* 可调整按钮宽度，防止太大 */
   height: auto;
 }
+/* 响应式：手机屏幕优化 */
+@media screen and (max-width: 768px) {
+  /* 表单项改为单列 */
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* 表单输入框和按钮宽度铺满并美观 */
+  form input,
+  form button {
+    max-width: 100%;
+    width: 100%;
+    margin: 0;
+  }
+
+  /* 表格容器横向滚动避免溢出 */
+  .table-container {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  /* 表格字体缩小一些适配小屏 */
+  table {
+    font-size: 14px;
+  }
+
+  /* 操作按钮上下排列 */
+  td:last-child {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+
+  td:last-child button {
+    width: 80%;
+  }
+}
