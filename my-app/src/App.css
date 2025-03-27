@@ -111,25 +111,33 @@ td:last-child button {
   width: 70px;              /* 可调整按钮宽度，防止太大 */
   height: auto;
 }
-/* ✅ 移动端两列输入样式：每行两个输入框 */
+/* 主页面表单默认样式（桌面端） */
+.main-form {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(150px, 1fr));
+  gap: 50px;
+  justify-content: center;
+  max-width: 2000px;
+  margin: 0 auto;
+}
+
+/* ✅ 手机端适配：小屏幕时每行两个输入框 */
 @media (max-width: 768px) {
-  form {
-    display: grid !important;
-    grid-template-columns: repeat(2, 1fr); /* 两列 */
+  .main-form {
+    grid-template-columns: repeat(2, 1fr);
     gap: 12px;
-    max-width: 100%;
     padding: 0 10px;
+    max-width: 100%;
   }
 
-  form input,
-  form button {
+  .main-form input,
+  .main-form button {
     width: 100% !important;
     margin: 0 !important;
   }
 
-  /* ✅ 提交按钮单独一行居中显示 */
-  form button {
+  .main-form button {
     grid-column: span 2;
-    margin-top: 10px !important;
+    margin-top: 10px;
   }
 }

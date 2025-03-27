@@ -186,15 +186,9 @@ function App() {
       <form
   onSubmit={handleSubmit}
   ref={formRef}
-  style={{
-    display: 'grid',
-    gridTemplateColumns: 'repeat(5, 1fr)', // 每行 5 列
-    gap: '30px',                           // 输入框之间的间距
-    maxWidth: '1100px',                    // 表单最大宽度
-    margin: '0 auto',                      // 居中显示
-    padding: '0 20px'                      // 页面两侧留白
-  }}
+  className="main-form"
 >
+
   {/* 第一行：5个输入框 */}
   <input type="text" name="name" placeholder="试剂名称（必填）" value={formData.name} onChange={handleChange} required style={{ width: '100%' }} />
   <input type="text" name="location" placeholder="存放位置" value={formData.location} onChange={handleChange} style={{ width: '100%' }} />
