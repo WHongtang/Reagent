@@ -111,3 +111,18 @@ td:last-child button {
   width: 70px;              /* 可调整按钮宽度，防止太大 */
   height: auto;
 }
+/* ✅ 移动端输入框垂直排列 */
+@media (max-width: 768px) {
+  form {
+    display: flex !important;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  form input,
+  form button {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin: 8px 0 !important;
+  }
+}
